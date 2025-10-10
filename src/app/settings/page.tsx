@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import type { DirectoryHandle } from "@/lib/storage/fs";
 import { chooseDataDirectory, getPersistedDirectory } from "@/lib/storage/fs";
+import { useRouter } from "next/navigation";
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [dir, setDir] = useState<DirectoryHandle | null>(null);
   const [dirName, setDirName] = useState<string>("");
 
@@ -52,9 +53,7 @@ export default function SettingsPage() {
       <h1 className="text-3xl font-bold mb-6">Settings</h1>
 
       <div className="flex items-center gap-4">
-        <Button asChild variant="outline">
-          <Link href="/">← Back</Link>
-        </Button>
+        <Button variant="outline" onClick={() => router.back()}>← Back</Button>
         <Button onClick={onPickFolder}>Choose Data Folder</Button>
         <span className="text-sm" aria-live="polite">{dir ? `Folder: ${dirName}` : "No folder selected"}</span>
       </div>

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { toast } from "sonner";
 import type { DirectoryHandle } from "@/lib/storage/fs";
 import { getPersistedDirectory, readJson, writeJson } from "@/lib/storage/fs";
@@ -249,9 +248,6 @@ export default function DashboardPage() {
   return (
     <main className="max-w-6xl mx-auto h-dvh grid grid-rows-[auto_1fr] gap-3 px-3 py-3">
       <div className="flex items-center gap-3">
-        <Button asChild variant="outline">
-          <Link href="/">← Back</Link>
-        </Button>
         <Button variant="outline" onClick={() => refreshPrices()}>
           Refresh Prices
         </Button>
