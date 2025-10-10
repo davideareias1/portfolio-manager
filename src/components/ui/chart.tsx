@@ -2,6 +2,11 @@
 
 import * as React from "react"
 import * as RechartsPrimitive from "recharts"
+import type {
+  Payload as TooltipPayload,
+  NameType as TooltipNameType,
+  ValueType as TooltipValueType,
+} from "recharts/types/component/DefaultTooltipContent"
 
 import { cn } from "@/lib/utils"
 
@@ -128,6 +133,15 @@ function ChartTooltipContent({
   }) {
   const { config } = useChart()
 
+  type RechartsItem = {
+    payload?: { ts?: number; date?: string; time?: string; stroke?: string }
+    color?: string
+    name?: string
+    dataKey?: string
+    type?: string
+    value?: number
+  }
+
   const tooltipLabel = React.useMemo(() => {
     if (hideLabel || !payload?.length) {
       return null
@@ -138,7 +152,9 @@ function ChartTooltipContent({
     if (labelFormatter) {
       // Resolve a robust x-axis label from payload first, then fall back to provided label
       let safeLabel: unknown = label
-      const p: any = Array.isArray(payload) && payload.length ? payload[0]?.payload : undefined
+      const p = (Array.isArray(payload) && payload.length
+        ? (payload[0] as RechartsItem)?.payload
+        : undefined)
       if (p) {
         if (typeof p.ts === "number") {
           safeLabel = p.ts
@@ -208,14 +224,19 @@ function ChartTooltipContent({
           .filter((item) => item.type !== "none")
           .map((item, index) => {
             const key = `${nameKey || item.name || item.dataKey || "value"}`
-            const itemConfig = getPayloadConfigFromPayload(config, item, key)
+            const itemConfig = getPayloadConfigFromPayload(
+              config,
+              item as unknown as Record<string, unknown>,
+              key
+            )
             // Prefer a solid series color; avoid gradient URLs like url(#id)
             const isUrlColor = (v: unknown) => typeof v === "string" && v.startsWith("url(")
             const seriesColorVar = `var(--color-${key})`
-            const payloadStroke = (item as any)?.payload?.stroke
+            const payloadStroke = (item as unknown as RechartsItem)?.payload?.stroke
             const indicatorColor =
               color ||
-              (!isUrlColor((item as any)?.color) && (item as any)?.color) ||
+              (!isUrlColor((item as unknown as RechartsItem)?.color) &&
+                (item as unknown as RechartsItem)?.color) ||
               (!isUrlColor(payloadStroke) && payloadStroke) ||
               seriesColorVar
 
@@ -228,7 +249,13 @@ function ChartTooltipContent({
                 )}
               >
                 {formatter && item?.value !== undefined && item.name ? (
-                  formatter(item.value, item.name, item, index, item.payload)
+                  formatter(
+                    item.value as TooltipValueType,
+                    item.name as TooltipNameType,
+                    item as unknown as TooltipPayload<TooltipValueType, TooltipNameType>,
+                    index,
+                    (payload as unknown as TooltipPayload<TooltipValueType, TooltipNameType>[])
+                  )
                 ) : (
                   <>
                     {itemConfig?.icon ? (
@@ -317,7 +344,8 @@ function ChartLegendContent({
           const itemConfig = getPayloadConfigFromPayload(config, item, key)
           const isUrlColor = (v: unknown) => typeof v === "string" && v.startsWith("url(")
           const swatchColor =
-            (!isUrlColor((item as any)?.color) && (item as any)?.color) ||
+            (!isUrlColor((item as unknown as { color?: string })?.color) &&
+              (item as unknown as { color?: string })?.color) ||
             `var(--color-${key})`
 
           return (

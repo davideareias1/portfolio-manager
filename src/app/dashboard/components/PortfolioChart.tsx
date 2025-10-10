@@ -1,7 +1,7 @@
 "use client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
-import { Area, AreaChart, XAxis, YAxis, CartesianGrid, ReferenceLine } from "recharts";
+import { Area, AreaChart, XAxis, YAxis, ReferenceLine } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface ChartDataPoint {
@@ -93,7 +93,7 @@ export function PortfolioChart({ chartData, isLoading }: PortfolioChartProps) {
                   cursor={false}
                   content={
                     <ChartTooltipContent
-                      labelFormatter={(value: unknown, payload: any[]) => {
+                      labelFormatter={(value: unknown, payload: Array<{ payload?: { ts?: number; date?: string; time?: string } }>) => {
                         // Coerce label to timestamp (ms)
                         let ms: number | undefined
                         if (typeof value === "number" && Number.isFinite(value)) {
@@ -107,7 +107,7 @@ export function PortfolioChart({ chartData, isLoading }: PortfolioChartProps) {
                           }
                         }
                         if (ms == null && Array.isArray(payload) && payload.length) {
-                          const p: any = payload[0]?.payload
+                          const p = payload[0]?.payload as { ts?: number; date?: string; time?: string } | undefined
                           if (p) {
                             if (typeof p.ts === "number") ms = p.ts
                             else if (typeof p.date === "string") {
