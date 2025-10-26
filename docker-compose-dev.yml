@@ -1,0 +1,39 @@
+# Development Docker Compose for PortfolioManager with hot reload
+services:
+  portfoliomanager-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: portfoliomanager-dev
+    restart: unless-stopped
+    volumes:
+      # Mount source code for hot reload
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./next.config.ts:/app/next.config.ts
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./tailwind.config.ts:/app/tailwind.config.ts
+      - ./postcss.config.mjs:/app/postcss.config.mjs
+      - ./components.json:/app/components.json
+      - ./eslint.config.mjs:/app/eslint.config.mjs
+      # Exclude node_modules to avoid conflicts
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+    networks:
+      - traefik_web
+    labels:
+      - traefik.enable=true
+      # Main site routing
+      - traefik.http.routers.portfoliomanager-dev.rule=Host(`portfolio.areias.it`)
+      - traefik.http.routers.portfoliomanager-dev.entrypoints=websecure
+      - traefik.http.routers.portfoliomanager-dev.tls.certresolver=le
+      - traefik.http.routers.portfoliomanager-dev.middlewares=simple-auth@docker
+      - traefik.http.services.portfoliomanager-dev.loadbalancer.server.port=3000
+      - traefik.docker.network=traefik_web
+
+networks:
+  traefik_web:
+    name: traefik_web
+    external: true

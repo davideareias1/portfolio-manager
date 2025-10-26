@@ -1,24 +1,34 @@
+# Production Docker Compose for PortfolioManager
 services:
-  web:
-    build: .
-    container_name: portfolio-web
-    restart: always
+  portfoliomanager:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: portfoliomanager
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     environment:
       - NODE_ENV=production
-      - PORT=3000
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.portfolio.rule=Host(`portfolio.areias.it`)"
-      - "traefik.http.routers.portfolio.entrypoints=websecure"
-      - "traefik.http.routers.portfolio.tls=true"
-      - "traefik.http.routers.portfolio.tls.certresolver=myresolver"
-      - "traefik.http.services.portfolio.loadbalancer.server.port=3000"
     networks:
       - traefik_web
-    expose:
-      - "3000"
-    # If you prefer to use a prebuilt image, replace build: . with image: your/image
+    labels:
+      - traefik.enable=true
+      # Main site routing
+      - traefik.http.routers.portfoliomanager.rule=Host(`portfolio.areias.it`)
+      - traefik.http.routers.portfoliomanager.entrypoints=websecure
+      - traefik.http.routers.portfoliomanager.tls.certresolver=le
+      - traefik.http.routers.portfoliomanager.middlewares=simple-auth@docker
+      - traefik.http.services.portfoliomanager.loadbalancer.server.port=3000
+      - traefik.docker.network=traefik_web
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (res) => { process.exit(res.statusCode === 200 || res.statusCode === 307 ? 0 : 1); })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
   traefik_web:
-    external: true # must exist (created by your Traefik stack)
+    name: traefik_web
+    external: true

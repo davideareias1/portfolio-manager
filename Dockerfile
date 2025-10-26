@@ -1,36 +1,49 @@
-# -------- Build stage --------
-FROM node:20-alpine AS builder
+# Production Dockerfile for PortfolioManager
+FROM node:20-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Install dependencies
-COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* bun.lockb* ./
-# Use npm by default; if a lockfile exists for others, install the manager and use it
-RUN if [ -f pnpm-lock.yaml ]; then npm i -g pnpm@9 && pnpm i --frozen-lockfile; \
-    elif [ -f yarn.lock ]; then corepack enable && yarn install --frozen-lockfile; \
-    elif [ -f bun.lockb ]; then npm i -g bun && bun install --frozen-lockfile; \
-    else npm ci; fi
+# Copy package files
+COPY package.json package-lock.json* ./
+RUN npm ci
 
-# Copy source
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Build Next.js (standalone output)
+# Build the application
 RUN npm run build
 
-# -------- Runtime stage --------
-FROM node:20-alpine AS runner
+# Production image, copy all the files and run next
+FROM base AS runner
 WORKDIR /app
+
 ENV NODE_ENV=production
 
-# Create non-root user
-RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
 
-# Copy standalone output and public assets
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
+# Set the correct permission for prerender cache
+RUN mkdir .next
+RUN chown nextjs:nodejs .next
 
-# Expose port and run
-ENV PORT=3000
-EXPOSE 3000
+# Automatically leverage output traces to reduce image size
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Copy public assets after standalone (standalone doesn't include public folder)
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
 USER nextjs
+
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
 CMD ["node", "server.js"]
